@@ -1,0 +1,29 @@
+# ===== Build artifacts =====
+bin/
+obj/
+artifacts/
+*.user
+
+# ===== IDE =====
+.vs/
+.vscode/
+.idea/
+*.suo
+*.userosscache
+*.sln.docstates
+
+# ===== Test results =====
+TestResults/
+*.trx
+
+# ===== Runtime / secrets =====
+# Local, environment-specific config must NEVER be committed.
+appsettings.*.Local.json
+appsettings.Production.json
+deploy/*.env
+.env
+*.pdb
+
+# ===== Logs =====
+logs/
+*.log
