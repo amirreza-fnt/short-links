@@ -90,6 +90,52 @@ public sealed partial class LinkManagementService(
         return ToDto(entity, group?.Name, baseUrl);
     }
 
+    public async Task<BatchCreateLinksResponse> CreateBatchAsync(
+        BatchCreateLinksRequest request,
+        string baseUrl,
+        CancellationToken ct = default)
+    {
+        if (request.Items.Count == 0)
+            return new BatchCreateLinksResponse();
+
+        if (request.Items.Count > 200)
+            throw new AppValidationException("Batch size cannot exceed 200 items.");
+
+        var results = new List<BatchCreateLinkResult>(request.Items.Count);
+
+        foreach (var item in request.Items)
+        {
+            try
+            {
+                var created = await CreateAsync(new CreateLinkRequest
+                {
+                    Url = item.Url,
+                    Code = item.Code,
+                    GroupName = item.GroupName,
+                    ExpiresAt = item.ExpiresAt,
+                    IsActive = item.IsActive
+                }, baseUrl, ct);
+
+                results.Add(new BatchCreateLinkResult
+                {
+                    Url = item.Url,
+                    ShortUrl = created.ShortUrl,
+                    Code = created.Code
+                });
+            }
+            catch (Exception ex) when (ex is AppValidationException or AppConflictException)
+            {
+                results.Add(new BatchCreateLinkResult
+                {
+                    Url = item.Url,
+                    Error = ex.Message
+                });
+            }
+        }
+
+        return new BatchCreateLinksResponse { Results = results };
+    }
+
     public async Task<LinkDto?> GetAsync(string code, string baseUrl, CancellationToken ct = default)
     {
         var entity = await db.ShortLinks

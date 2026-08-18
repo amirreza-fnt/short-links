@@ -22,6 +22,18 @@ public static class LinkEndpoints
             return Results.Created($"/api/links/{created.Code}", created);
         });
 
+        group.MapPost("/batch", async (
+            BatchCreateLinksRequest request,
+            LinkManagementService service,
+            HttpRequest http,
+            PageRenderer pages,
+            CancellationToken ct) =>
+        {
+            var baseUrl = pages.ResolvePublicBaseUrl(http)?.ToString() ?? string.Empty;
+            var created = await service.CreateBatchAsync(request, baseUrl, ct);
+            return Results.Ok(created);
+        });
+
         group.MapGet("/", async (
             LinkManagementService service,
             HttpRequest http,

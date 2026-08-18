@@ -9,6 +9,33 @@ public sealed record CreateLinkRequest
     public bool IsActive { get; init; } = true;
 }
 
+public sealed record BatchCreateLinkItemRequest
+{
+    public string Url { get; init; } = string.Empty;
+    public string? Code { get; init; }
+    public string? GroupName { get; init; }
+    public DateTimeOffset? ExpiresAt { get; init; }
+    public bool IsActive { get; init; } = true;
+}
+
+public sealed record BatchCreateLinksRequest
+{
+    public IReadOnlyList<BatchCreateLinkItemRequest> Items { get; init; } = Array.Empty<BatchCreateLinkItemRequest>();
+}
+
+public sealed record BatchCreateLinkResult
+{
+    public string Url { get; init; } = string.Empty;
+    public string? ShortUrl { get; init; }
+    public string? Code { get; init; }
+    public string? Error { get; init; }
+}
+
+public sealed record BatchCreateLinksResponse
+{
+    public IReadOnlyList<BatchCreateLinkResult> Results { get; init; } = Array.Empty<BatchCreateLinkResult>();
+}
+
 public sealed record UpdateLinkRequest
 {
     public string? Url { get; init; }
