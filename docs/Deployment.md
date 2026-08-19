@@ -13,7 +13,8 @@ dotnet restore
 dotnet run --project src/ShortLinks.Api
 ```
 
-- آدرس: `http://localhost:5000` (قابل تغییر در `Kestrel:Endpoints` داخل `appsettings.json`)
+- API: `http://localhost:5013` (`--launch-profile Api`)
+- فرانت: `http://localhost:5015` (`--launch-profile Web`)
 - در اولین اجرا دیتابیس ساخته و Migration اعمال می‌شود (`Migrate:OnStartup`)
 
 ## اجرای چند نمونه (مقیاس افقی)

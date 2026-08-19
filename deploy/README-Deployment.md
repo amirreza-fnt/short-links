@@ -121,8 +121,8 @@ systemctl enable shortlinks.service
 systemctl restart shortlinks.service
 ```
 
-سرویس به‌صورت خودکار روی پورت `5013` و همه‌ی رابط‌ها اجرا می‌شود
-(تنظیم در `appsettings.json` → `Kestrel:Endpoints:Http:Url`).
+سرویس به‌صورت خودکار روی پورت `5013` (API) اجرا می‌شود.
+فرانت جدا روی پورت `5015` با `shortlinks-web.service` اجرا می‌شود.
 
 ---
 

@@ -6,10 +6,14 @@ using ShortLinks.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ---- Configuration -------------------------------------------------------
+var hostingRole = (builder.Configuration["Hosting:Role"] ?? "All").Trim();
+var runApi = hostingRole.Equals("Api", StringComparison.OrdinalIgnoreCase)
+             || hostingRole.Equals("All", StringComparison.OrdinalIgnoreCase);
+var runWeb = hostingRole.Equals("Web", StringComparison.OrdinalIgnoreCase)
+             || hostingRole.Equals("All", StringComparison.OrdinalIgnoreCase);
+
 var redisConnection = builder.Configuration.GetConnectionString("Redis");
 
-// ---- Persistence ---------------------------------------------------------
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
     var connectionString = builder.Configuration.GetConnectionString("SqlServer")
@@ -18,7 +22,6 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         sql.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null));
 });
 
-// ---- Fast cache layer: Redis when configured, in-memory otherwise ----------
 if (!string.IsNullOrWhiteSpace(redisConnection))
 {
     builder.Services.AddStackExchangeRedisCache(o =>
@@ -32,44 +35,62 @@ else
     builder.Services.AddDistributedMemoryCache();
 }
 
-// ---- Application services -------------------------------------------------
 builder.Services.Configure<PublicOptions>(builder.Configuration.GetSection("Public"));
+builder.Services.Configure<CacheOptions>(builder.Configuration.GetSection(CacheOptions.Section));
 
 builder.Services.AddSingleton<ShortCodeGenerator>();
 builder.Services.AddSingleton<CacheService>();
-builder.Services.Configure<CacheOptions>(builder.Configuration.GetSection(CacheOptions.Section));
 builder.Services.AddSingleton<ClickStatsQueue>();
-builder.Services.AddHostedService<ClickStatsProcessor>();
+builder.Services.AddSingleton<PageRenderer>();
 
-builder.Services.AddScoped<AppDbContext>();
 builder.Services.AddScoped<LinkQueryService>();
 builder.Services.AddScoped<RedirectService>();
 builder.Services.AddScoped<LinkManagementService>();
 builder.Services.AddScoped<GroupManagementService>();
 builder.Services.AddScoped<StatsService>();
-builder.Services.AddSingleton<PageRenderer>();
+
+if (runWeb)
+{
+    builder.Services.AddHostedService<ClickStatsProcessor>();
+}
 
 var app = builder.Build();
 
-// ---- Database initialization ----------------------------------------------
-if (builder.Configuration.GetValue("Migrate:OnStartup", true))
+if (runApi && builder.Configuration.GetValue("Migrate:OnStartup", true))
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
 }
 
-// ---- Pipeline -------------------------------------------------------------
 app.UseMiddleware<ErrorHandlingMiddleware>();
-app.UseStaticFiles();
+
+if (runWeb)
+{
+    app.UseStaticFiles();
+}
 
 app.UseRouting();
 
-app.MapGet("/health", () => Results.Ok(new { status = "healthy", utc = DateTimeOffset.UtcNow }));
+app.MapGet("/health", () => Results.Ok(new
+{
+    status = "healthy",
+    role = hostingRole,
+    utc = DateTimeOffset.UtcNow
+}));
 
-app.MapRedirectEndpoints();
-app.MapLinkEndpoints();
-app.MapGroupEndpoints();
-app.MapStatsEndpoints();
+if (runWeb)
+{
+    app.MapRedirectEndpoints();
+}
+
+if (runApi)
+{
+    app.MapLinkEndpoints();
+    app.MapGroupEndpoints();
+    app.MapStatsEndpoints();
+}
+
+app.Logger.LogInformation("ShortLinks started as {Role} (api={RunApi}, web={RunWeb})", hostingRole, runApi, runWeb);
 
 app.Run();

@@ -1,6 +1,13 @@
 # سامانه کوتاه‌کننده لینک — شهرداری سبزوار
 
-سرویس بک‌اند و فرانت کوتاه‌کننده لینک با تمرکز بر **سرعت بالای خواندن**، **مقیاس‌پذیری افقی** و **ثبت آمار غیرهمزمان**.
+بک‌اند و فرانت جدا اجرا می‌شوند.
+
+| سرویس | دامنه | پورت پروژه | پورت دامنه |
+|---|---|---|---|
+| بک‌اند API | `apiweb-shortlink.sabzevar.ir` | `5013` | `5015` |
+| فرانت + ریدایرکت | `sbzl.ir` | `5015` | `5016` |
+
+فرانت روی `5015` است؛ پورت `5014` برای ShortLinkBridge است.
 
 ## ویژگی‌ها
 
@@ -19,18 +26,9 @@
 ## معماری
 
 ```
-                    ┌─────────────────────────────────────────────┐
- Browser / پنل      │            ShortLinks.Api (ASP.NET Core 8)   │
-   │                │  POST /api/links  ───► SQL Server            │
-   │                │  /{code}      ───► Cache (Redis) ──► DB      │
-   │                │  /{group}/{code}                              │
-   │                │        │                                       │
-   ▼                │        ▼  (فقط queue، بدون await)             │
- Redirect 302/301   │  ClickStatsQueue (Channel)                    │
-                    │        │                                       │
-                    │        ▼  (BackgroundService، بچ‌نویس)          │
-                    │   ClickStats ──► SQL Server                    │
-                    └─────────────────────────────────────────────┘
+apiweb-shortlink:5013                 sbzl.ir:5015
+POST /api/links ──► SQL               GET /{code} ──► Cache/DB ──► 302
+                                      آمار کلیک غیرهمزمان ──► SQL
 ```
 
 نکات طراحی برای نیازمندی «سرعت بالای خواندن»:
@@ -71,10 +69,12 @@
 ```bash
 cd short-links
 dotnet restore
-dotnet run --project src/ShortLinks.Api
+dotnet run --project src/ShortLinks.Api --launch-profile Api
+dotnet run --project src/ShortLinks.Api --launch-profile Web
 ```
 
-سرویس روی `http://localhost:5000` بالا می‌آید. در اولین اجرا دیتابیس `ShortLinks` به‌صورت خودکار ساخته و Migrationها اعمال می‌شوند.
+- API: `http://localhost:5013`
+- فرانت: `http://localhost:5015`
 
 تست‌ها:
 
@@ -88,7 +88,8 @@ dotnet test
 |---|---|
 | `ConnectionStrings:SqlServer` | رشته اتصال دیتابیس |
 | `ConnectionStrings:Redis` | خالی = کش حافظه؛ مقداردهی = Redis |
-| `Public:BaseUrl` | دامنه عمومی برای ساخت `shortUrl` در خروجی API (مثلا `https://sbzl.ir`) |
+| `Hosting:Role` | `Api` بک‌اند، `Web` فرانت/ریدایرکت، `All` هر دو |
+| `Public:BaseUrl` | دامنه عمومی لینک کوتاه (`https://sbzl.ir`) |
 | `Cache:InstanceName` | پیشوند کلیدهای کش |
 | `Cache:TtlMinutes` | عمر کش (پیش‌فرض ۱۴۴۰ = ۲۴ ساعت) |
 | `Migrate:OnStartup` | اعمال خودکار Migration در استارت‌آپ |
@@ -97,24 +98,21 @@ dotnet test
 
 ```bash
 # ۱) ساخت گروه‌ها (قالب‌های UTM)
-curl -X POST http://localhost:5000/api/groups -H "Content-Type: application/json" -d '{"name":"u1","utmParams":{"utm_source":"WWW"}}'
-curl -X POST http://localhost:5000/api/groups -H "Content-Type: application/json" -d '{"name":"u2","utmParams":{"utm_source":"BILBORD"}}'
-curl -X POST http://localhost:5000/api/groups -H "Content-Type: application/json" -d '{"name":"utm","utmParams":{"utm_source":"SEO","utm_medium":"banner","utm_campaign":"sabzevar"}}'
+curl -X POST http://localhost:5013/api/groups -H "Content-Type: application/json" -d '{"name":"u1","utmParams":{"utm_source":"WWW"}}'
+curl -X POST http://localhost:5013/api/groups -H "Content-Type: application/json" -d '{"name":"u2","utmParams":{"utm_source":"BILBORD"}}'
+curl -X POST http://localhost:5013/api/groups -H "Content-Type: application/json" -d '{"name":"utm","utmParams":{"utm_source":"SEO","utm_medium":"banner","utm_campaign":"sabzevar"}}'
 
 # ۲) ایجاد لینک کوتاه
-curl -X POST http://localhost:5000/api/links -H "Content-Type: application/json" \
+curl -X POST http://localhost:5013/api/links -H "Content-Type: application/json" \
      -d '{"url":"https://map.sabzevar.ir/A/B/C?Q=1&W=2"}'
-# → { "code": "i5SXNS", "shortUrl": "http://localhost:5000/i5SXNS", ... }
+# → { "code": "i5SXNS", "shortUrl": "https://sbzl.ir/i5SXNS", ... }
 
-# ۳) ریدایرکت‌ها
-curl -I http://localhost:5000/i5SXNS            # → https://map.sabzevar.ir/A/B/C?Q=1&W=2
-curl -I http://localhost:5000/u1/i5SXNS         # → ...&utm_source=WWW
-curl -I http://localhost:5000/u2/i5SXNS         # → ...&utm_source=BILBORD
-curl -I http://localhost:5000/utm/i5SXNS        # → ...&utm_source=SEO&utm_medium=banner&...
+# ۳) ریدایرکت‌ها (فرانت)
+curl -I http://localhost:5015/i5SXNS
+curl -I http://localhost:5015/u1/i5SXNS
 
-# ۴) آمار (پس از چند ثانیه، چون غیرهمزمان است)
-curl http://localhost:5000/api/links/i5SXNS/stats/summary
-curl "http://localhost:5000/api/links/i5SXNS/stats/timeseries?bucket=hour"
+# ۴) آمار (بک‌اند)
+curl http://localhost:5013/api/links/i5SXNS/stats/summary
 ```
 
 ## مستندات بیشتر

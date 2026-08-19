@@ -1,11 +1,11 @@
 [Unit]
-Description=Short Links API (apiweb-shortlink)
+Description=Short Links Web (sbzl.ir)
 After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/var/www/shortlinks
-ExecStart=/usr/bin/dotnet /var/www/shortlinks/ShortLinks.Api.dll
+WorkingDirectory=/var/www/shortlinks-web
+ExecStart=/usr/bin/dotnet /var/www/shortlinks-web/ShortLinks.Api.dll
 Restart=always
 RestartSec=5
 KillSignal=SIGINT
