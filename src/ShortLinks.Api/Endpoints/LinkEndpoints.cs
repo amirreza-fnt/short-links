@@ -48,7 +48,7 @@ public static class LinkEndpoints
             return Results.Ok(await service.GetListAsync(search, groupName, page, pageSize, baseUrl, ct));
         });
 
-        group.MapGet("/{code}", async (
+        group.MapGet("/{code:regex(^(?!batch$)[0-9A-Za-z]+$)}", async (
             string code,
             LinkManagementService service,
             HttpRequest http,
@@ -60,7 +60,7 @@ public static class LinkEndpoints
             return link is null ? Results.NotFound() : Results.Ok(link);
         });
 
-        group.MapPut("/{code}", async (
+        group.MapPut("/{code:regex(^(?!batch$)[0-9A-Za-z]+$)}", async (
             string code,
             UpdateLinkRequest request,
             LinkManagementService service,
@@ -73,7 +73,7 @@ public static class LinkEndpoints
             return updated is null ? Results.NotFound() : Results.Ok(updated);
         });
 
-        group.MapDelete("/{code}", async (
+        group.MapDelete("/{code:regex(^(?!batch$)[0-9A-Za-z]+$)}", async (
             string code,
             LinkManagementService service,
             CancellationToken ct) =>
