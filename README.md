@@ -2,12 +2,13 @@
 
 بک‌اند و فرانت جدا اجرا می‌شوند.
 
-| سرویس | دامنه | پورت پروژه | پورت دامنه |
+| سرویس | دامنه | پورت پروژه | پورت دامنه (nginx) |
 |---|---|---|---|
-| بک‌اند API | `apiweb-shortlink.sabzevar.ir` | `5013` | `5015` |
-| فرانت + ریدایرکت | `sbzl.ir` | `5015` | `5016` |
+| بک‌اند API | `apiweb-shortlink.sabzevar.ir` | `5013` | `5015` HTTPS |
+| فرانت + ریدایرکت | `sbzl.ir` | `5014` | `5016` HTTPS |
+| ShortLinkBridge | داخلی | `5017` | — |
 
-فرانت روی `5015` است؛ پورت `5014` برای ShortLinkBridge است.
+پورت `5015` مال nginx است، نه خودِ فرانت.
 
 ## ویژگی‌ها
 
@@ -26,7 +27,7 @@
 ## معماری
 
 ```
-apiweb-shortlink:5013                 sbzl.ir:5015
+apiweb-shortlink:5013                 sbzl.ir:5014
 POST /api/links ──► SQL               GET /{code} ──► Cache/DB ──► 302
                                       آمار کلیک غیرهمزمان ──► SQL
 ```
@@ -74,7 +75,7 @@ dotnet run --project src/ShortLinks.Api --launch-profile Web
 ```
 
 - API: `http://localhost:5013`
-- فرانت: `http://localhost:5015`
+- فرانت: `http://localhost:5014`
 
 تست‌ها:
 
@@ -108,8 +109,8 @@ curl -X POST http://localhost:5013/api/links -H "Content-Type: application/json"
 # → { "code": "i5SXNS", "shortUrl": "https://sbzl.ir/i5SXNS", ... }
 
 # ۳) ریدایرکت‌ها (فرانت)
-curl -I http://localhost:5015/i5SXNS
-curl -I http://localhost:5015/u1/i5SXNS
+curl -I http://localhost:5014/i5SXNS
+curl -I http://localhost:5014/u1/i5SXNS
 
 # ۴) آمار (بک‌اند)
 curl http://localhost:5013/api/links/i5SXNS/stats/summary

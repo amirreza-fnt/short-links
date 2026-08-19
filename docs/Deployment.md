@@ -14,7 +14,7 @@ dotnet run --project src/ShortLinks.Api
 ```
 
 - API: `http://localhost:5013` (`--launch-profile Api`)
-- فرانت: `http://localhost:5015` (`--launch-profile Web`)
+- فرانت: `http://localhost:5014` (`--launch-profile Web`)
 - در اولین اجرا دیتابیس ساخته و Migration اعمال می‌شود (`Migrate:OnStartup`)
 
 ## اجرای چند نمونه (مقیاس افقی)
