@@ -21,6 +21,7 @@ TestResults/
 appsettings.*.Local.json
 appsettings.Production.json
 deploy/*.env
+deploy/api-publish/
 .env
 *.pdb
 

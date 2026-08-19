@@ -54,6 +54,20 @@ if (runWeb)
     builder.Services.AddHostedService<ClickStatsProcessor>();
 }
 
+if (runApi)
+{
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen(options =>
+    {
+        options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+        {
+            Title = "ShortLinks API",
+            Version = "v1",
+            Description = "بک‌اند سامانه لینک کوتاه شهرداری سبزوار"
+        });
+    });
+}
+
 var app = builder.Build();
 
 if (runApi && builder.Configuration.GetValue("Migrate:OnStartup", true))
@@ -72,7 +86,17 @@ if (runWeb)
 
 app.UseRouting();
 
-app.MapGet("/health", () => Results.Ok(new
+if (runApi)
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "ShortLinks API v1");
+        options.RoutePrefix = "swagger";
+    });
+}
+
+app.MapMethods("/health", ["GET", "HEAD"], () => Results.Ok(new
 {
     status = "healthy",
     role = hostingRole,
