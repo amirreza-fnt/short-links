@@ -87,7 +87,7 @@ cat > /var/www/shortlinks/appsettings.Production.json <<'EOF'
     "Redis": ""
   },
   "Public": {
-    "BaseUrl": "http://185.255.91.242:5013"
+    "BaseUrl": "https://sbzl.ir"
   },
   "Migrate": {
     "OnStartup": true

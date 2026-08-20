@@ -46,13 +46,28 @@ public sealed class PageRenderer(
         return field;
     }
 
-    public Uri? ResolvePublicBaseUrl(HttpRequest request)
+    public Uri ResolvePublicBaseUrl(HttpRequest request)
     {
-        var configured = options.Value.BaseUrl;
-        if (!string.IsNullOrWhiteSpace(configured))
-        {
-            return new Uri(configured.TrimEnd('/'));
-        }
-        return new Uri($"{request.Scheme}://{request.Host}");
+        var configured = options.Value.BaseUrl?.Trim().TrimEnd('/');
+        if (TryGetPublicDomain(configured, out var uri))
+            return uri;
+
+        return new Uri("https://sbzl.ir");
+    }
+
+    private static bool TryGetPublicDomain(string? url, out Uri uri)
+    {
+        uri = null!;
+        if (string.IsNullOrWhiteSpace(url) || !Uri.TryCreate(url, UriKind.Absolute, out var parsed))
+            return false;
+
+        if (parsed.Host is "localhost" or "127.0.0.1" or "::1")
+            return false;
+
+        if (System.Net.IPAddress.TryParse(parsed.Host, out _))
+            return false;
+
+        uri = parsed;
+        return true;
     }
 }
